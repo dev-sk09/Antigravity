@@ -20,6 +20,14 @@ public final class SensitiveDataRedactor {
             "(?i)([\\\"]?(?:authorization|cookie)[\\\"]?\\s*[:=]\\s*)[^,}\\r\\n]+");
     private static final Pattern BEARER = Pattern.compile(
             "(?i)(\\bBearer\\s+)[A-Za-z0-9._~+/-]+=*");
+    /**
+     * Each pattern above needs "://" or one of these words (case-insensitive),
+     * so a line without them cannot change and skips the regex passes.
+     */
+    private static final String[] HINTS = {
+            "token", "secret", "passw", "key", "code", "session",
+            "authorization", "cookie", "bearer"
+    };
 
     private SensitiveDataRedactor() {
     }
@@ -50,7 +58,7 @@ public final class SensitiveDataRedactor {
 
     /** Redacts full URL paths and sensitive token fields embedded in arbitrary log text. */
     public static String redactLine(String line) {
-        if (line == null || line.isEmpty()) {
+        if (line == null || line.isEmpty() || !mayNeedRedaction(line)) {
             return line;
         }
         Matcher urls = URL.matcher(line);
@@ -62,5 +70,18 @@ public final class SensitiveDataRedactor {
         String redacted = SECRET_FIELD.matcher(output.toString()).replaceAll("$1<redacted>");
         redacted = SENSITIVE_HEADER.matcher(redacted).replaceAll("$1<redacted>");
         return BEARER.matcher(redacted).replaceAll("$1<redacted>");
+    }
+
+    private static boolean mayNeedRedaction(String line) {
+        if (line.contains("://")) {
+            return true;
+        }
+        String lower = line.toLowerCase(Locale.ROOT);
+        for (String hint : HINTS) {
+            if (lower.contains(hint)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

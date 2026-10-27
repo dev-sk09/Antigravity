@@ -209,7 +209,7 @@ public final class CoreProcessSupervisor {
                 if (logBuffer != null) {
                     logBuffer.appendLine(safeLine);
                 }
-                CoreLogWriter.writeLine(log, safeLine);
+                CoreLogWriter.writeRedactedLine(log, safeLine);
                 openUrlWatcher.handleStreamLine(line);
             }
         } catch (Exception e) {

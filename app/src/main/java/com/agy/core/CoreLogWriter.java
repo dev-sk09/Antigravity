@@ -34,8 +34,16 @@ public final class CoreLogWriter {
         if (log == null || line == null) {
             return;
         }
+        writeRedactedLine(log, SensitiveDataRedactor.redactLine(line));
+    }
+
+    /** Appends a line the caller already passed through SensitiveDataRedactor. */
+    public static void writeRedactedLine(Writer log, String line) {
+        if (log == null || line == null) {
+            return;
+        }
         try {
-            log.write(SensitiveDataRedactor.redactLine(line));
+            log.write(line);
             log.write('\n');
             log.flush();
         } catch (Exception ignored) {
