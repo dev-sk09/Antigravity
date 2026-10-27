@@ -1,0 +1,173 @@
+#!/usr/bin/env python3
+"""
+agy-agent - Local Agent sidecar for Antigravity (model router + tool agent).
+
+Serves an OpenAI-compatible router on 127.0.0.1 behind a bearer token, so the
+in-app "Local Agent" panel can use OpenRouter or any base_url + key + model.
+
+  agy-agent start [--port N] [--foreground]
+  agy-agent stop | status
+
+The token comes from $AGY_AGENT_TOKEN or --token-file (0600); it is never
+taken from the command line, which other processes could read.
+"""
+
+import argparse
+import os
+import signal
+import sys
+import time
+
+_SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+_OVERLAY_LIB = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", "lib"))
+if _OVERLAY_LIB not in sys.path:
+    sys.path.insert(0, _OVERLAY_LIB)
+
+from agent import paths  # noqa: E402
+
+DEFAULT_PORT = 45264
+
+
+def log(msg):
+    line = "[%s] %s" % (time.strftime("%Y-%m-%d %H:%M:%S"), msg)
+    print(line, flush=True)
+
+
+def read_token(args):
+    tok = os.environ.get("AGY_AGENT_TOKEN", "").strip()
+    if not tok and getattr(args, "token_file", None):
+        try:
+            with open(args.token_file, "r", encoding="utf-8") as f:
+                tok = f.read().strip()
+        except OSError:
+            tok = ""
+    return tok
+
+
+def running_pid():
+    try:
+        with open(paths.PID_FILE, "r") as f:
+            pid = int(f.read().strip())
+        os.kill(pid, 0)
+        return pid
+    except (OSError, ValueError):
+        return None
+
+
+def tool_factory():
+    """Phase C hook: returns factory(body) -> (tools, runner, max_steps) or None."""
+    try:
+        from agent import tools as tools_mod
+        return tools_mod.factory
+    except ImportError:
+        return None
+
+
+def run_server(port, token):
+    from agent import server
+    paths.ensure_dir()
+    srv = server.serve("127.0.0.1", port, token, tool_factory=tool_factory())
+    log("Local Agent listening on 127.0.0.1:%d" % port)
+    stop = {"flag": False}
+
+    def _stop(_s, _f):
+        stop["flag"] = True
+
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGINT, _stop)
+    try:
+        while not stop["flag"]:
+            time.sleep(0.5)
+    finally:
+        srv.shutdown()
+        srv.server_close()
+        try:
+            if running_pid() == os.getpid():
+                os.unlink(paths.PID_FILE)
+        except OSError:
+            pass
+        log("Local Agent stopped.")
+
+
+def daemonize():
+    if os.fork() > 0:
+        sys.exit(0)
+    os.setsid()
+    if os.fork() > 0:
+        sys.exit(0)
+    paths.ensure_dir()
+    with open("/dev/null", "r") as dn:
+        os.dup2(dn.fileno(), sys.stdin.fileno())
+    logf = open(paths.LOG_FILE, "a", encoding="utf-8")
+    os.dup2(logf.fileno(), sys.stdout.fileno())
+    os.dup2(logf.fileno(), sys.stderr.fileno())
+
+
+def cmd_start(args):
+    token = read_token(args)
+    if not token:
+        print("[agy-agent] no token: set AGY_AGENT_TOKEN or --token-file", file=sys.stderr)
+        sys.exit(2)
+    if running_pid():
+        print("[agy-agent] already running (PID %d)" % running_pid())
+        return
+    port = args.port or int(os.environ.get("AGY_AGENT_PORT") or DEFAULT_PORT)
+    if not args.foreground:
+        # Flush before forking, or the child re-emits the buffered line.
+        print("[agy-agent] starting on 127.0.0.1:%d" % port, flush=True)
+        daemonize()
+    paths.ensure_dir()
+    with open(paths.PID_FILE, "w") as f:
+        f.write(str(os.getpid()))
+    run_server(port, token)
+
+
+def cmd_stop(_args):
+    pid = running_pid()
+    if not pid:
+        print("[agy-agent] not running")
+        return
+    os.kill(pid, signal.SIGTERM)
+    for _ in range(15):
+        time.sleep(0.2)
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            break
+    else:
+        os.kill(pid, signal.SIGKILL)
+    try:
+        os.unlink(paths.PID_FILE)
+    except OSError:
+        pass
+    print("[agy-agent] stopped")
+
+
+def cmd_status(_args):
+    pid = running_pid()
+    print("Local Agent: " + ("RUNNING (PID %d)" % pid if pid else "STOPPED"))
+    print("Config dir:  " + paths.AGENT_DIR)
+
+
+def main():
+    p = argparse.ArgumentParser(description="Antigravity Local Agent sidecar")
+    sub = p.add_subparsers(dest="cmd")
+    ps = sub.add_parser("start")
+    ps.add_argument("--port", type=int, default=0)
+    ps.add_argument("--token-file")
+    ps.add_argument("--foreground", "-f", action="store_true")
+    sub.add_parser("stop")
+    sub.add_parser("status")
+    args = p.parse_args()
+    if args.cmd == "start":
+        cmd_start(args)
+    elif args.cmd == "stop":
+        cmd_stop(args)
+    elif args.cmd == "status":
+        cmd_status(args)
+    else:
+        p.print_help()
+
+
+if __name__ == "__main__":
+    main()
