@@ -3,9 +3,11 @@
 # prints -1 | 0 | 1
 #
 # Rules: epoch:upstream-revision. Non-digit chars: '~' sorts before
-# empty, empty before letters, letters before other chars.
+# empty, empty before letters, letters before other chars. A digit met
+# while the other side still has a non-digit orders like empty (dpkg).
 function ord(c) {
     if (c == "") return 0
+    if (c ~ /[0-9]/) return 0
     if (c == "~") return -1
     if (c ~ /[A-Za-z]/) return index(ORD, c)
     return index(ORD, c) + 256

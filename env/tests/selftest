@@ -39,6 +39,12 @@ vc 1.0-1       1.0-1       0
 vc 1.2.3-4     1.2.3-4build1 -1
 vc 1.0a        1.0b       -1
 vc 1.0+really1.1 1.0       1
+# digit against a non-digit at the same position (expected values from dpkg)
+vc 1.0~rc1     1.0~1       1
+vc 2.11~beta   2.11~5      1
+vc 1.0.0       1.0.a      -1
+vc 1.a         1.0         1
+vc 1.0+git     1.0+1       1
 
 # ---- index parsing ---------------------------------------------------------
 FIX="$SELF/fixtures/Packages"
