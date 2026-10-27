@@ -134,7 +134,7 @@ function decorateHome(list) {
   var wrap = list.parentElement;
   var host = wrap && wrap.parentElement;
   if (!host) return;
-  host.setAttribute('data-dm-home', '');
+  if (!host.hasAttribute('data-dm-home')) host.setAttribute('data-dm-home', '');
   if (!wrap.hasAttribute('data-dm-list-wrap')) {
     wrap.setAttribute('data-dm-list-wrap', '');
     wrap.addEventListener('click', function (e) {

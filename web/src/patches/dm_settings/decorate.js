@@ -10,7 +10,10 @@ function rowName(btn) {
 function decorateRow(btn) {
   var name = rowName(btn);
   var label = btn.querySelector(':scope > span.flex-1') || btn.querySelector(':scope > .flex-col > span');
-  if (label) label.setAttribute('data-dm-sub', summaryFor(name));
+  if (label) {
+    var sub = summaryFor(name);
+    if (label.getAttribute('data-dm-sub') !== sub) label.setAttribute('data-dm-sub', sub);
+  }
   if (btn.getAttribute('data-dm') === '1') return;
   btn.setAttribute('data-dm', '1');
   btn.setAttribute('data-dm-row', name);
@@ -40,15 +43,20 @@ function filterRows(list, q) {
   if (none) none.hidden = shown > 0;
 }
 
+// Writes only on change. Rewriting identical text still swaps the text node,
+// and our own childList observer would answer that with another scan: a
+// scan every frame for as long as Settings stays open.
 function syncQuick(head) {
   var ar = head.querySelector('[data-dm-q="autoresume"]');
   if (ar) {
     var on = autoResumeOn();
+    var pressed = on ? 'true' : 'false';
     ar.classList.toggle('on', on);
-    ar.setAttribute('aria-pressed', on ? 'true' : 'false');
+    if (ar.getAttribute('aria-pressed') !== pressed) ar.setAttribute('aria-pressed', pressed);
   }
   var th = head.querySelector('[data-dm-q="theme"] b');
-  if (th) th.textContent = isDark() ? 'Dark' : 'Light';
+  var theme = isDark() ? 'Dark' : 'Light';
+  if (th && th.textContent !== theme) th.textContent = theme;
 }
 
 function buildHead(list) {
@@ -93,7 +101,7 @@ function buildHead(list) {
 
 function decorateList(list) {
   // list = the upstream column holding the "Settings" title and the rows.
-  list.setAttribute('data-dm-settings', '');
+  if (!list.hasAttribute('data-dm-settings')) list.setAttribute('data-dm-settings', '');
   var title = list.firstElementChild;
   var head = list.querySelector(':scope > .dm-set-head');
   if (!head) {
