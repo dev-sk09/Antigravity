@@ -47,7 +47,10 @@ def pack_binaries(core_bin_path: str, loader_path: str, shims_dir: str, dest_bin
         make_exec(dst_xdg)
         installed.append("xdg-open")
 
-    # Browser shims (symlinks to xdg-open with fallback to compact delegate script)
+    # Browser shims: compact scripts that exec xdg-open from the same directory.
+    # Always real files, never symlinks: APK packaging follows symlinks and
+    # would store a full copy of xdg-open under each name, so the APK would
+    # depend on whether the build filesystem supports symlinks.
     browser_dir = os.path.join(shims_dir, "browser")
     if os.path.isdir(browser_dir):
         browser_delegates = [
@@ -61,18 +64,15 @@ def pack_binaries(core_bin_path: str, loader_path: str, shims_dir: str, dest_bin
         ]
         for src_name, dst_name in browser_delegates:
             dst_f = os.path.join(dest_bin_dir, dst_name)
-            try:
-                if os.path.lexists(dst_f):
-                    os.unlink(dst_f)
-                os.symlink("xdg-open", dst_f)
-            except OSError:
-                src_f = os.path.join(browser_dir, src_name)
-                if os.path.isfile(src_f):
-                    shutil.copyfile(src_f, dst_f)
-                else:
-                    with open(dst_f, "w", encoding="utf-8") as f:
-                        f.write('#!/system/bin/sh\nexec "$(dirname "$0")/xdg-open" "$@"\n')
-                make_exec(dst_f)
+            if os.path.lexists(dst_f):
+                os.unlink(dst_f)
+            src_f = os.path.join(browser_dir, src_name)
+            if os.path.isfile(src_f):
+                shutil.copyfile(src_f, dst_f)
+            else:
+                with open(dst_f, "w", encoding="utf-8") as f:
+                    f.write('#!/system/bin/sh\nexec "$(dirname "$0")/xdg-open" "$@"\n')
+            make_exec(dst_f)
             installed.append(dst_name)
 
     # System shims
@@ -81,13 +81,10 @@ def pack_binaries(core_bin_path: str, loader_path: str, shims_dir: str, dest_bin
         src_open_helper = os.path.join(sys_dir, "open_helper.sh")
         if os.path.isfile(src_open_helper):
             dst_f = os.path.join(dest_bin_dir, "open_helper")
-            try:
-                if os.path.lexists(dst_f):
-                    os.unlink(dst_f)
-                os.symlink("xdg-open", dst_f)
-            except OSError:
-                shutil.copyfile(src_open_helper, dst_f)
-                make_exec(dst_f)
+            if os.path.lexists(dst_f):
+                os.unlink(dst_f)
+            shutil.copyfile(src_open_helper, dst_f)
+            make_exec(dst_f)
             installed.append("open_helper")
 
     # Privilege shims
