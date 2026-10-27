@@ -5,7 +5,8 @@
  * AGY_JS): which layout is open, the touched element, every ancestor up to
  * <body> with its overflow / touch-action / scroll sizes, whether any
  * touchmove was default-prevented, and whether anything actually scrolled.
- * Remove this file from src.manifest once the scroll bug is understood.
+ * Installed only in dev builds (__APP_CONFIG__.devMode). Remove this file
+ * from src.manifest once the scroll bug is understood.
  */
 function describeEl(el) {
   if (!el || !el.tagName) return String(el);

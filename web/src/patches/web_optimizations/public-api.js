@@ -10,9 +10,11 @@ var doc = global.document;
 if (!doc) return;
 
 installTaps(doc);
-installViewport(global, doc);
 installGpu(doc);
-installSheetScroll(global, doc);
-installScrollDebug(global, doc);
+installSheetScroll(doc);
+// Logs a full ancestor dump on every swipe; dev builds only.
+if (global.__APP_CONFIG__ && global.__APP_CONFIG__.devMode) {
+  installScrollDebug(global, doc);
+}
 
 global.__agWebOptimizations = { installed: true };
