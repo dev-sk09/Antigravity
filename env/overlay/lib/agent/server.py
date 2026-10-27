@@ -53,9 +53,26 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             return {}
 
+    def _cors(self):
+        # Loopback + token-gated; the WebView page is a different origin/port,
+        # so CORS must be permitted for the panel to reach the sidecar at all.
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "authorization, content-type")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+        self.send_header("Access-Control-Max-Age", "600")
+
+    def do_OPTIONS(self):
+        # Preflight carries no Authorization header, so it is answered unauthenticated.
+        self.send_response(204)
+        self._cors()
+        self.send_header("Content-Length", "0")
+        self.send_header("Connection", "close")
+        self.end_headers()
+
     def _json(self, status, obj):
         body = json.dumps(obj).encode("utf-8")
         self.send_response(status)
+        self._cors()
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Connection", "close")
@@ -64,6 +81,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _sse_open(self):
         self.send_response(200)
+        self._cors()
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
         self.send_header("Connection", "close")

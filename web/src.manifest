@@ -71,3 +71,14 @@ src/patches/dm_home/state.js
 src/patches/dm_home/decorate.js
 src/patches/dm_home/install.js
 src/patches/dm_home/public-api.js
+
+bundle iife patches/agent_panel.js
+src/patches/agent_panel/config.js
+src/patches/agent_panel/api.js
+src/patches/agent_panel/providers.js
+src/patches/agent_panel/models.js
+src/patches/agent_panel/chat.js
+src/patches/agent_panel/settings.js
+src/patches/agent_panel/panel.js
+src/patches/agent_panel/install.js
+src/patches/agent_panel/public-api.js

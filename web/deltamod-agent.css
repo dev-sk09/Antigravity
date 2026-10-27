@@ -1,0 +1,93 @@
+/*
+ * deltamod-agent.css - the Local Agent panel (patches/agent_panel).
+ * Scoped under .agx-* so it never touches the host Gemini UI. Theme-aware via
+ * the app's CSS vars with safe fallbacks.
+ */
+:root {
+  --agx-bg: var(--background, #0b0e17);
+  --agx-fg: var(--foreground, #e7edff);
+  --agx-muted: var(--text-secondary, #8b93a7);
+  --agx-card: color-mix(in srgb, var(--agx-fg) 6%, var(--agx-bg));
+  --agx-line: color-mix(in srgb, var(--agx-fg) 14%, transparent);
+  --agx-accent: var(--primary, #4f8cff);
+  --agx-accent-fg: #fff;
+  --agx-danger: #ef4444;
+  --agx-ok: #22c55e;
+}
+
+/* Launcher button (lives on <body>, survives host re-renders). */
+.agx-fab {
+  position: fixed; right: 16px; bottom: 84px; z-index: 2147483000;
+  width: 48px; height: 48px; border-radius: 50%; border: none;
+  background: var(--agx-accent); color: var(--agx-accent-fg);
+  box-shadow: 0 6px 20px rgba(0,0,0,.35); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.agx-fab svg { width: 24px; height: 24px; }
+
+/* Full-screen overlay panel. */
+.agx-panel {
+  position: fixed; inset: 0; z-index: 2147483001; display: none;
+  flex-direction: column; background: var(--agx-bg); color: var(--agx-fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.agx-panel.agx-open { display: flex; }
+.agx-head {
+  display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+  padding-top: calc(12px + env(safe-area-inset-top)); border-bottom: 1px solid var(--agx-line);
+}
+.agx-head .agx-title { font-weight: 700; font-size: 16px; flex: 1; }
+.agx-head .agx-sep { color: var(--agx-muted); font-weight: 400; font-size: 13px; }
+.agx-x { background: none; border: none; color: var(--agx-fg); font-size: 22px; cursor: pointer; padding: 4px 8px; }
+
+.agx-tabs { display: flex; border-bottom: 1px solid var(--agx-line); }
+.agx-tab {
+  flex: 1; background: none; border: none; color: var(--agx-muted);
+  padding: 11px 6px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent;
+}
+.agx-tab.agx-active { color: var(--agx-fg); border-bottom-color: var(--agx-accent); }
+
+.agx-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px; }
+.agx-view { display: none; }
+.agx-view.agx-active { display: block; }
+
+.agx-card { background: var(--agx-card); border: 1px solid var(--agx-line); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+.agx-row { display: flex; align-items: center; gap: 10px; }
+.agx-grow { flex: 1; min-width: 0; }
+.agx-muted { color: var(--agx-muted); font-size: 12px; }
+.agx-label { display: block; font-size: 12px; color: var(--agx-muted); margin: 8px 0 4px; }
+.agx-input, .agx-select, .agx-textarea {
+  width: 100%; box-sizing: border-box; background: var(--agx-bg); color: var(--agx-fg);
+  border: 1px solid var(--agx-line); border-radius: 9px; padding: 9px 10px; font-size: 14px;
+}
+.agx-textarea { resize: none; }
+.agx-btn {
+  background: var(--agx-accent); color: var(--agx-accent-fg); border: none;
+  border-radius: 9px; padding: 9px 14px; font-size: 14px; cursor: pointer;
+}
+.agx-btn.agx-ghost { background: transparent; color: var(--agx-fg); border: 1px solid var(--agx-line); }
+.agx-btn.agx-danger { background: var(--agx-danger); }
+.agx-btn:disabled { opacity: .5; }
+
+.agx-plist .agx-pitem { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--agx-line); }
+.agx-plist .agx-pitem:last-child { border-bottom: none; }
+.agx-badge { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--agx-line); color: var(--agx-muted); }
+.agx-badge.agx-sel { color: var(--agx-ok); border-color: var(--agx-ok); }
+
+.agx-mitem { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--agx-line); cursor: pointer; }
+.agx-mitem .agx-mid { font-size: 13px; word-break: break-all; }
+.agx-mfree { color: var(--agx-ok); border-color: var(--agx-ok); }
+.agx-mitem.agx-chosen { background: color-mix(in srgb, var(--agx-accent) 12%, transparent); border-radius: 8px; }
+
+/* Chat */
+.agx-chat { display: flex; flex-direction: column; height: 100%; }
+.agx-msgs { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px; }
+.agx-msg { margin: 8px 0; max-width: 92%; padding: 9px 12px; border-radius: 12px; white-space: pre-wrap; word-wrap: break-word; }
+.agx-msg.agx-user { margin-left: auto; background: var(--agx-accent); color: var(--agx-accent-fg); }
+.agx-msg.agx-asst { margin-right: auto; background: var(--agx-card); border: 1px solid var(--agx-line); }
+.agx-tool { margin: 6px 0; font-size: 12px; color: var(--agx-muted); border-left: 2px solid var(--agx-accent); padding: 4px 8px; }
+.agx-tool pre { margin: 4px 0 0; white-space: pre-wrap; max-height: 160px; overflow: auto; }
+.agx-composer { display: flex; gap: 8px; padding: 8px 0; padding-bottom: calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--agx-line); }
+.agx-err { color: var(--agx-danger); font-size: 13px; padding: 8px 0; }
+.agx-warn { color: #f59e0b; font-size: 12px; }
+.agx-switch { display: flex; align-items: center; gap: 8px; justify-content: space-between; padding: 8px 0; }

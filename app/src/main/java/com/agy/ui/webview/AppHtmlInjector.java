@@ -14,12 +14,21 @@ public final class AppHtmlInjector {
 
     /** Web layer generates the ready signal under generated/patches. */
     private static final String READY_SCRIPT = "./generated/patches/startup_ready.js";
-    private static final String CSP = "default-src 'self' https: data: blob:; "
-            + "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; "
-            + "style-src 'self' 'unsafe-inline' https:; "
-            + "img-src 'self' https: data: blob:; font-src 'self' https: data:; "
-            + "connect-src 'self' https: wss:; frame-src https: data: blob:; "
-            + "worker-src 'self' blob:; object-src 'none'; base-uri 'self'";
+
+    /**
+     * connect-src also allows the Local Agent sidecar's loopback origin so the
+     * panel can reach it. http://127.0.0.1 is a secure context in Chromium, so
+     * it is not blocked as mixed content from the https page.
+     */
+    private static String csp(int agentPort) {
+        String agent = "http://127.0.0.1:" + agentPort;
+        return "default-src 'self' https: data: blob:; "
+                + "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; "
+                + "style-src 'self' 'unsafe-inline' https:; "
+                + "img-src 'self' https: data: blob:; font-src 'self' https: data:; "
+                + "connect-src 'self' https: wss: " + agent + "; frame-src https: data: blob:; "
+                + "worker-src 'self' blob:; object-src 'none'; base-uri 'self'";
+    }
 
     private AppHtmlInjector() {
     }
@@ -33,7 +42,7 @@ public final class AppHtmlInjector {
             endpoints.put("core", base);
             endpoints.put("core_http", base);
             endpoints.put("enginePort", bridge.getEnginePort());
-            boot = "<meta http-equiv=\"Content-Security-Policy\" content=\"" + CSP + "\">"
+            boot = "<meta http-equiv=\"Content-Security-Policy\" content=\"" + csp(bridge.getAgentPort()) + "\">"
                     + "<script>(function(){"
                     + "window.__APP_CONFIG__=" + config.toString() + ";"
                     + "window.__AG_ENDPOINTS__=" + endpoints.toString() + ";"
