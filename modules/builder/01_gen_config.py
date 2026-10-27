@@ -42,6 +42,7 @@ def main():
     port = env.get("PORT_DEV", "45158") if is_dev else env.get("PORT", "45157")
     port_dev = env.get("PORT_DEV", "45158")
     gw_port = env.get("GATEWAY_PORT_DEV", "45161") if is_dev else env.get("GATEWAY_PORT", "45160")
+    agent_port = env.get("AGENT_PORT_DEV", "45265") if is_dev else env.get("AGENT_PORT", "45264")
     core_version = env.get("CORE_VERSION", "2.11.0")
     app_version_name = env.get("APP_VERSION_NAME", "2.4.0")
     app_version_code = env.get("APP_VERSION_CODE", "16")
@@ -67,6 +68,7 @@ def main():
         "    public static final int PORT = %s;\n"
         "    public static final int PORT_DEV = %s;\n"
         "    public static final int GATEWAY_PORT = %s;\n"
+        "    public static final int AGENT_PORT = %s;\n"
         "    public static final String CORE_VERSION = %s;\n"
         "    public static final String APP_VERSION_NAME = %s;\n"
         "    public static final int APP_VERSION_CODE = %s;\n"
@@ -81,6 +83,7 @@ def main():
         port,
         port_dev,
         gw_port,
+        agent_port,
         java_string(core_version),
         java_string(app_version_name),
         app_version_code,

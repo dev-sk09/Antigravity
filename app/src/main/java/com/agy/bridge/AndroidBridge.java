@@ -143,6 +143,16 @@ public final class AndroidBridge {
         return engine.getCsrfToken();
     }
 
+    /** Loopback port of the Local Agent sidecar (agy-agent). */
+    public int getAgentPort() {
+        return com.agy.BuildConfig.AGENT_PORT;
+    }
+
+    /** Bearer token for the Local Agent sidecar; null until the core service set it. */
+    public String getAgentToken() {
+        return com.agy.core.CoreRuntimeState.gatewayToken;
+    }
+
     public String getConfig() {
         return config.get();
     }

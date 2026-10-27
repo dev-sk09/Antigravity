@@ -100,15 +100,18 @@ def _run_command(args, cfg, roots):
 
 # ---- device tool (via the Java gateway) -------------------------------------
 def _gateway():
-    port = os.environ.get("AGY_GATEWAY_PORT")
-    token = os.environ.get("AGY_GATEWAY_TOKEN", "")
     home = os.environ.get("HOME", "")
-    if not port and home:
+    port, token = "", os.environ.get("AGY_GATEWAY_TOKEN", "")
+    # The port file is authoritative: the gateway rewrites it if it had to
+    # fall back to another port. Fall back to the env hint only if absent.
+    if home:
         try:
             with open(os.path.join(home, "logs", "gateway.port")) as f:
                 port = f.read().strip()
         except OSError:
             pass
+    if not port:
+        port = os.environ.get("AGY_GATEWAY_PORT", "")
     if not token and home:
         try:
             with open(os.path.join(home, "logs", "gateway.token")) as f:

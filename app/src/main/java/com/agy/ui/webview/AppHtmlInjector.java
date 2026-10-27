@@ -45,6 +45,9 @@ public final class AppHtmlInjector {
                     + JSONObject.quote(theme != null ? theme.getTheme() : "light") + ";"
                     + "window.__AG_NATIVE_BRIDGE_TOKEN__="
                     + JSONObject.quote(bridge.getBlobBridgeToken()) + ";"
+                    // Local Agent sidecar (agy-agent) endpoint for the panel.
+                    + "window.__AG_AGENT__={port:" + bridge.getAgentPort() + ",token:"
+                    + JSONObject.quote(bridge.getAgentToken() == null ? "" : bridge.getAgentToken()) + "};"
                     + "window.AndroidBridge=window.Android;"
                     + "window.dialog={showOpenDialog:function(){return new Promise(function(resolve){window.__onDirectoryPicked=function(path){resolve(path);};if(window.Android&&typeof window.Android.openDirectoryPicker==='function'){window.Android.openDirectoryPicker();}else{resolve(null);}});}};"
                     + "})();</script>"

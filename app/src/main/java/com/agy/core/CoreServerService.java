@@ -68,6 +68,62 @@ public final class CoreServerService extends Service {
         taskGuardian.start();
 
         startBackgroundDaemon();
+        startModelAgent();
+    }
+
+    /** Env shared by the sidecar helpers: the same base the daemon uses. */
+    private void applyEnv(ProcessBuilder pb) {
+        String files = getFilesDir().getAbsolutePath();
+        pb.directory(getFilesDir());
+        pb.environment().put("PATH", files + "/usr/bin:" + System.getenv("PATH"));
+        pb.environment().put("HOME", files);
+        pb.environment().put("PREFIX", files + "/usr");
+        pb.environment().put("LD_LIBRARY_PATH", files + "/usr/lib");
+    }
+
+    /** Local Agent sidecar (agy-agent): OpenAI-compatible model router + tools. */
+    private void startModelAgent() {
+        new Thread(() -> {
+            try {
+                Thread.sleep(1800);
+                File agentBin = new File(getFilesDir(), "usr/bin/agy-agent");
+                if (!agentBin.canExecute()) {
+                    return;
+                }
+                Log.i(TAG, "Starting Local Agent sidecar...");
+                ProcessBuilder pb = new ProcessBuilder(
+                        agentBin.getAbsolutePath(), "start",
+                        "--port", String.valueOf(com.agy.BuildConfig.AGENT_PORT));
+                applyEnv(pb);
+                // The sidecar's own token and the gateway token (for its device
+                // tool) are passed in the environment, never on the command line.
+                String token = CoreRuntimeState.gatewayToken;
+                if (token != null) {
+                    pb.environment().put("AGY_AGENT_TOKEN", token);
+                    pb.environment().put("AGY_GATEWAY_TOKEN", token);
+                }
+                pb.start();
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to start agy-agent: " + e.getMessage());
+            }
+        }, "AgyAgentStarter").start();
+    }
+
+    private void stopModelAgent() {
+        try {
+            File agentBin = new File(getFilesDir(), "usr/bin/agy-agent");
+            if (agentBin.canExecute()) {
+                Log.i(TAG, "Stopping Local Agent sidecar...");
+                ProcessBuilder pb = new ProcessBuilder(agentBin.getAbsolutePath(), "stop");
+                applyEnv(pb);
+                Process p = pb.start();
+                if (!p.waitFor(1500, TimeUnit.MILLISECONDS)) {
+                    p.destroyForcibly();
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to stop agy-agent: " + e.getMessage());
+        }
     }
 
     private void startBackgroundDaemon() {
@@ -149,6 +205,7 @@ public final class CoreServerService extends Service {
     @Override
     public void onDestroy() {
         stopBackgroundDaemon();
+        stopModelAgent();
         if (gatewayServer != null) {
             gatewayServer.stop();
         }
