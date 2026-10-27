@@ -1,10 +1,6 @@
 /**
- * patches/touch_model_menu/scan.js - debounced DOM scan for effort groups.
+ * patches/touch_model_menu/scan.js - DOM scan for effort groups.
  */
-
-// Trailing debounce: DOM mutates constantly while a reply streams. A rAF scan
-// would run at screen refresh (60-120 Hz); coalesce to one pass.
-var SCAN_DEBOUNCE_MS = 180;
 
 function scan() {
   var groups = [];
@@ -21,10 +17,32 @@ function scan() {
   }
 }
 
+// Only an added node that is or contains an effort group can need a new row
+// handler. A streaming reply mutates the DOM every frame and never adds one,
+// so it no longer triggers periodic full-document scans.
+function bringsEffortGroup(records) {
+  for (var i = 0; i < records.length; i++) {
+    var added = records[i].addedNodes;
+    for (var j = 0; j < added.length; j++) {
+      var n = added[j];
+      if (n.nodeType === 1
+          && (n.matches(CONFIG.effortGroup) || n.querySelector(CONFIG.effortGroup))) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 function scheduleScan() {
   if (state.scanTimer) return;
-  state.scanTimer = setTimeout(function () {
+  // Next frame, so the handler is in place before the new row can be tapped.
+  state.scanTimer = (window.requestAnimationFrame || setTimeout)(function () {
     state.scanTimer = 0;
     scan();
-  }, SCAN_DEBOUNCE_MS);
+  });
+}
+
+function onMutations(records) {
+  if (!state.scanTimer && bringsEffortGroup(records)) scheduleScan();
 }

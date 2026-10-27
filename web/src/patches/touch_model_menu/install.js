@@ -15,7 +15,7 @@ function install() {
 
   var root = document.querySelector(CONFIG.root) || document.body || document.documentElement;
   if (window.MutationObserver && root) {
-    state.observer = new MutationObserver(scheduleScan);
+    state.observer = new MutationObserver(onMutations);
     state.observer.observe(root, { childList: true, subtree: true });
   }
   console.log('[agTouchModelMenu] active (rows=' + state.rows + ').');
