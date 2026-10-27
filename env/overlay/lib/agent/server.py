@@ -19,6 +19,7 @@ from urllib.parse import urlparse, parse_qs
 from . import models as models_mod
 from . import providers as providers_mod
 from . import loop as loop_mod
+from . import settings as settings_mod
 
 VERSION = "1.0.0"
 
@@ -90,6 +91,10 @@ class Handler(BaseHTTPRequestHandler):
                                                  "model": model}})
         if u.path == "/providers":
             return self._json(200, {"ok": True, **providers_mod.list_providers()})
+        if u.path == "/settings":
+            cfg = settings_mod.load()
+            return self._json(200, {"ok": True, "settings": cfg,
+                                    "allowed_roots": settings_mod.allowed_roots(cfg)})
         if u.path == "/models":
             q = parse_qs(u.query)
             pid = (q.get("provider") or [None])[0]
@@ -133,6 +138,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, {"ok": True, "selected": sel})
             except ValueError as e:
                 return self._json(400, {"ok": False, "error": str(e)})
+        if u.path == "/settings":
+            cfg = settings_mod.save(self._body())
+            return self._json(200, {"ok": True, "settings": cfg,
+                                    "allowed_roots": settings_mod.allowed_roots(cfg)})
         if u.path == "/chat":
             return self._chat(self._body())
         return self._json(404, {"ok": False, "error": "not found"})
