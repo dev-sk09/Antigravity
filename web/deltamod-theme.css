@@ -1,0 +1,63 @@
+/* DeltaMod UI step 1: dark/blue finish on top of the app's own theme vars.
+   Colors come from --primary/--background etc. (set by main.js), so custom
+   themes picked in Settings still apply. */
+
+:root {
+  --dm-radius: 12px;
+  --dm-radius-sm: 8px;
+}
+
+/* Text selection and caret in the accent color. */
+::selection {
+  background: color-mix(in srgb, var(--primary) 35%, transparent);
+}
+textarea,
+input,
+[contenteditable="true"] {
+  caret-color: var(--primary);
+}
+
+/* Thin, quiet scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--foreground) 18%, transparent) transparent;
+}
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--foreground) 18%, transparent);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Focus ring in the accent color instead of white/black. */
+.dark,
+.dark-theme,
+.vscode-dark,
+:root,
+.vscode-light {
+  --focus-ring-color: color-mix(in srgb, var(--primary) 45%, transparent);
+}
+
+/* Softer, rounder inputs (chat box, settings fields). */
+textarea,
+input[type="text"],
+input[type="search"] {
+  border-radius: var(--dm-radius-sm);
+}
+
+/* Terminal / SDK surfaces (jetbox.css, @scope'd) follow the app theme
+   instead of the fixed #101010 / #191919 greys. */
+[data-theme="dark"] {
+  --sdk-color-canvas: var(--background) !important;
+  --sdk-background-viewport: var(--background) !important;
+  --sdk-color-surface: var(--card) !important;
+  --sdk-background-primary: var(--card) !important;
+  --sdk-color-surface-alt: var(--muted) !important;
+  --sdk-background-secondary: var(--muted) !important;
+  --sdk-background-tertiary: var(--secondary) !important;
+}

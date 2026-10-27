@@ -1,0 +1,39 @@
+# Build directories and outputs
+build/
+app/build/
+.gradle/
+dist/
+cache/
+*.apk
+*.dex
+*.class
+
+# Archives and binaries
+*.tar
+*.tar.gz
+*.tar.xz
+*.bin
+*.idsig
+!modules/core/pristine/language_server.tar.gz
+web.old_backup/
+env/dist/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Temporary and log files
+*.log
+*.tmp
+temp/
+standalone_runtime/
+
+# IDE and OS
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/
+app/src/main/assets/
+web/generated/

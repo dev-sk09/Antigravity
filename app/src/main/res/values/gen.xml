@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Gemini Premium</string>
+    <integer name="https_server_port">45257</integer>
+    <integer name="gateway_port">45260</integer>
+    <string name="oauth_scheme">antigravity</string>
+</resources>

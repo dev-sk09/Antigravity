@@ -1,0 +1,164 @@
+/* DeltaMod UI step 2: Settings home screen (prototype look).
+   Pairs with generated/patches/dm_settings.js, which adds the data-dm-*
+   attributes and the .dm-* nodes used here. Colors come from the app theme. */
+
+[data-dm-settings] {
+  --dm-line: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --dm-surface: var(--card, var(--muted));
+  --dm-soft: color-mix(in srgb, var(--primary) 16%, transparent);
+  padding: 4px 14px 18px !important;
+  gap: 0 !important;
+}
+
+/* The upstream "Settings" label is replaced by a title above the account card. */
+[data-dm-settings] > div:first-child { display: none !important; }
+
+/* Search + quick toggles */
+.dm-set-head { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
+.dm-search {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--dm-surface); border: 1px solid var(--dm-line);
+  border-radius: 14px; padding: 0 12px;
+  color: var(--muted-foreground);
+}
+.dm-search:focus-within { border-color: var(--primary); }
+.dm-search svg { width: 16px; height: 16px; flex: none; }
+.dm-search input {
+  flex: 1; min-width: 0; background: none; border: 0; outline: none;
+  padding: 11px 0; color: var(--foreground); font-size: 14px;
+  -webkit-appearance: none; appearance: none;
+}
+.dm-search input::-webkit-search-cancel-button { display: none; }
+.dm-quick { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; }
+.dm-qk {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 8px; border-radius: 14px;
+  background: var(--dm-surface); border: 1px solid var(--dm-line);
+  font-size: 13px; font-weight: 600; color: var(--muted-foreground);
+}
+.dm-qk svg { width: 18px; height: 18px; flex: none; }
+.dm-qk.on {
+  background: var(--dm-soft); color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+}
+.dm-none { padding: 20px 4px; text-align: center; font-size: 13px; color: var(--muted-foreground); }
+
+/* Rows: grouped cards with icon, title and one-line summary */
+[data-dm-settings] [data-dm-row] {
+  position: relative;
+  margin: 0 !important;
+  padding: 12px 14px !important;
+  gap: 12px !important;
+  border-radius: 0 !important;
+  background: var(--dm-surface) !important;
+  border: 1px solid var(--dm-line) !important;
+  border-top-width: 0 !important;
+}
+[data-dm-settings] [data-dm-row]:active { background: color-mix(in srgb, var(--primary) 8%, var(--dm-surface)) !important; }
+
+/* First row of a group: header above it, rounded top */
+[data-dm-settings] [data-dm-group] {
+  margin-top: 40px !important;
+  border-top-width: 1px !important;
+  border-top-left-radius: 16px !important;
+  border-top-right-radius: 16px !important;
+}
+[data-dm-settings] [data-dm-group]::before {
+  content: attr(data-dm-group);
+  position: absolute; left: 2px; top: -26px;
+  font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+/* Last row of a group: rounded bottom */
+[data-dm-settings] [data-dm-row="Appearance"],
+[data-dm-settings] [data-dm-row="Shortcuts"],
+[data-dm-settings] [data-dm-row="Provide Feedback"] {
+  border-bottom-left-radius: 16px !important;
+  border-bottom-right-radius: 16px !important;
+}
+
+.dm-sico {
+  width: 32px; height: 32px; border-radius: 10px; flex: none;
+  display: grid; place-items: center;
+  background: var(--dm-soft); color: var(--primary);
+}
+.dm-sico svg { width: 17px; height: 17px; }
+
+[data-dm-row] > span[data-dm-sub] {
+  font-weight: 600;
+  font-size: 15px !important;
+}
+[data-dm-row] > span[data-dm-sub]::after {
+  content: attr(data-dm-sub);
+  display: block;
+  margin-top: 2px;
+  font-size: 12px; font-weight: 400;
+  color: var(--muted-foreground);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Search: hide misses, drop group chrome while filtering */
+[data-dm-settings] [data-dm-hide] { display: none !important; }
+[data-dm-settings][data-dm-filtering] [data-dm-row] {
+  margin-top: 8px !important;
+  border-top-width: 1px !important;
+  border-radius: 16px !important;
+}
+[data-dm-settings][data-dm-filtering] [data-dm-group]::before { display: none; }
+
+/* Account: footer row becomes a highlighted card at the top of the sheet. */
+div:has(> [data-testid="settings-nav-item-Account"]) {
+  order: -1;
+  border-top: 0 !important;
+  padding: 4px 14px 12px !important;
+}
+div:has(> [data-testid="settings-nav-item-Account"])::before {
+  content: "Settings";
+  padding: 6px 2px 12px;
+  font-size: 22px; font-weight: 700;
+  color: var(--foreground);
+}
+[data-testid="settings-nav-item-Account"] {
+  margin: 0 !important;
+  padding: 14px !important;
+  gap: 12px !important;
+  border-radius: 18px !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 22%, var(--card, var(--muted))), var(--card, var(--muted))) !important;
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent) !important;
+}
+[data-testid="settings-nav-item-Account"] > div:first-child {
+  width: 44px !important; height: 44px !important;
+  border-radius: 14px !important;
+  background: linear-gradient(135deg, var(--primary), #8b5cf6) !important;
+  color: #fff !important;
+}
+[data-testid="settings-nav-item-Account"] > div:first-child span { font-size: 18px !important; font-weight: 700; }
+[data-testid="settings-nav-item-Account"] span[data-dm-sub] { font-weight: 700; font-size: 15px !important; }
+
+/* The search box draws its own focus border; skip the global focus ring. */
+.dm-search input:focus,
+.dm-search input:focus-visible {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* ---- Design D ---- */
+/* D: iOS style - colored rounded-square icons, tight grouped lists, no subtitles */
+.dm-quick { display: none !important; }
+.dm-search { border-radius: 12px !important; background: color-mix(in srgb, var(--foreground) 7%, transparent) !important; border: 0 !important; }
+[data-dm-settings] [data-dm-row] { padding: 11px 14px !important; border-left: 0 !important; border-right: 0 !important; border-bottom: 0 !important; border-top: 1px solid var(--dm-line) !important; }
+[data-dm-settings] [data-dm-group] { border-top: 0 !important; margin-top: 34px !important; border-top-left-radius: 12px !important; border-top-right-radius: 12px !important; }
+[data-dm-settings] [data-dm-row="Appearance"], [data-dm-settings] [data-dm-row="Shortcuts"], [data-dm-settings] [data-dm-row="Provide Feedback"] { border-bottom-left-radius: 12px !important; border-bottom-right-radius: 12px !important; }
+[data-dm-settings] [data-dm-group]::before { top: -22px; font-size: 11px; letter-spacing: .04em; }
+[data-dm-row] > span[data-dm-sub]::after { display: none !important; }
+[data-dm-row] > span[data-dm-sub] { font-weight: 500 !important; font-size: 16px !important; }
+.dm-sico { width: 30px !important; height: 30px !important; border-radius: 8px !important; color: #fff !important; }
+.dm-sico svg { width: 17px !important; height: 17px !important; }
+[data-dm-row="General"] .dm-sico { background: #8e8e93 !important; }
+[data-dm-row="Appearance"] .dm-sico { background: #4f8cff !important; }
+[data-dm-row="Models"] .dm-sico { background: #af52de !important; }
+[data-dm-row="Customizations"] .dm-sico { background: #ff9500 !important; }
+[data-dm-row="Shortcuts"] .dm-sico { background: #ff3b30 !important; }
+[data-dm-row="Provide Feedback"] .dm-sico { background: #34c759 !important; }
+[data-testid="settings-nav-item-Account"] { border-radius: 12px !important; background: var(--card) !important; border: 0 !important; }
+[data-testid="settings-nav-item-Account"] > div:first-child { border-radius: 999px !important; width: 56px !important; height: 56px !important; }
