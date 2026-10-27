@@ -64,9 +64,42 @@ CLR_CYAN = "\033[36m"
 CLR_GRAY = "\033[90m"
 
 
+def _gateway_token():
+    """Read the gateway's per-launch secret (reuse the bridge resolver when present)."""
+    if resolve_gateway_url and hasattr(resolve_gateway_url, "__module__"):
+        try:
+            from bridge.client import resolve_gateway_token
+            return resolve_gateway_token()
+        except Exception:
+            try:
+                from modules.env.bridge.client import resolve_gateway_token
+                return resolve_gateway_token()
+            except Exception:
+                pass
+    if "AGY_GATEWAY_TOKEN" in os.environ:
+        return os.environ["AGY_GATEWAY_TOKEN"]
+    home = os.environ.get("HOME")
+    for tfile in ([os.path.join(home, "logs", "gateway.token")] if home else []) + [
+        "/data/user/0/com.agy.dev/files/logs/gateway.token",
+        "/data/user/0/com.agy/files/logs/gateway.token",
+    ]:
+        try:
+            with open(tfile, "r") as f:
+                tok = f.read().strip()
+            if tok:
+                return tok
+        except Exception:
+            pass
+    return ""
+
+
 def fetch_from_gateway(url):
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "agy-logs"})
+        headers = {"User-Agent": "agy-logs"}
+        tok = _gateway_token()
+        if tok:
+            headers["Authorization"] = "Bearer " + tok
+        req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req, timeout=1.0) as resp:
             return json.loads(resp.read().decode("utf-8"))
     except Exception:

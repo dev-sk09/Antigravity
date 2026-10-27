@@ -22,8 +22,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Lightweight embedded HTTP Server listening strictly on 127.0.0.1:45158.
+ * Lightweight embedded HTTP Server listening strictly on 127.0.0.1:GATEWAY_PORT.
  * Zero external dependencies; exposes the Android System Gateway to the Linux/agent layer.
+ *
+ * Every request must carry the per-launch token (Authorization: Bearer &lt;token&gt;, or
+ * X-AGY-Gateway-Token: &lt;token&gt;); it is written to files/logs/gateway.token (0600) for
+ * in-sandbox callers and handed to the local agent sidecar at launch. The server fails
+ * closed: with no token configured, nothing is authorized. This keeps other apps on the
+ * device from driving the gateway (which can run shell commands) over loopback.
  */
 public final class SystemGatewayServer {
 
@@ -32,6 +38,7 @@ public final class SystemGatewayServer {
 
     private final Context context;
     private int port;
+    private final String authToken;
     private final GatewayDispatcher dispatcher;
     private final LogRingBuffer logBuffer;
     private final ExecutorService executor = Executors.newFixedThreadPool(4);
@@ -41,12 +48,17 @@ public final class SystemGatewayServer {
     private Thread acceptThread;
 
     public SystemGatewayServer(Context context, LogRingBuffer logBuffer) {
-        this(context, logBuffer, DEFAULT_PORT);
+        this(context, logBuffer, DEFAULT_PORT, null);
     }
 
     public SystemGatewayServer(Context context, LogRingBuffer logBuffer, int port) {
+        this(context, logBuffer, port, null);
+    }
+
+    public SystemGatewayServer(Context context, LogRingBuffer logBuffer, int port, String authToken) {
         this.context = context;
         this.port = port;
+        this.authToken = authToken;
         this.logBuffer = logBuffer;
         this.dispatcher = new GatewayDispatcher(context, logBuffer);
     }
@@ -73,6 +85,15 @@ public final class SystemGatewayServer {
                     File pFile = new File(context.getFilesDir(), "logs/gateway.port");
                     if (pFile.getParentFile() != null) pFile.getParentFile().mkdirs();
                     com.agy.util.AtomicFileWriter.writeText(pFile, String.valueOf(port) + "\n");
+                    // Token file for in-sandbox callers (0600). Other apps run under a
+                    // different uid and cannot read it; the port alone grants nothing.
+                    if (authToken != null && !authToken.isEmpty()) {
+                        File tFile = new File(context.getFilesDir(), "logs/gateway.token");
+                        com.agy.util.AtomicFileWriter.writeText(tFile, authToken + "\n");
+                        try {
+                            android.system.Os.chmod(tFile.getAbsolutePath(), 0600);
+                        } catch (Throwable ignored) {}
+                    }
                 } catch (Throwable ignored) {}
 
                 while (running && !serverSocket.isClosed()) {
@@ -123,10 +144,16 @@ public final class SystemGatewayServer {
             String path = parts[1];
 
             int contentLength = 0;
+            String authHeader = null;
             String line;
             while ((line = readHeaderLine(in)) != null && !line.isEmpty()) {
-                if (line.toLowerCase().startsWith("content-length:")) {
+                String lower = line.toLowerCase();
+                if (lower.startsWith("content-length:")) {
                     contentLength = Integer.parseInt(line.substring(15).trim());
+                } else if (lower.startsWith("authorization:")) {
+                    authHeader = line.substring("authorization:".length()).trim();
+                } else if (lower.startsWith("x-agy-gateway-token:")) {
+                    authHeader = line.substring("x-agy-gateway-token:".length()).trim();
                 }
             }
 
@@ -135,6 +162,16 @@ public final class SystemGatewayServer {
             }
             if (contentLength > 4 * 1024 * 1024) {
                 throw new IOException("Payload too large: " + contentLength);
+            }
+
+            if (!isAuthorized(authHeader)) {
+                // Drain any body so the socket closes cleanly, then refuse.
+                if (contentLength > 0) {
+                    skipBytes(in, contentLength);
+                }
+                writeResponse(out, "401 Unauthorized",
+                        "{\"ok\":false,\"error\":\"unauthorized\"}".getBytes(StandardCharsets.UTF_8));
+                return;
             }
 
             JSONObject responseJson = new JSONObject();
@@ -177,16 +214,42 @@ public final class SystemGatewayServer {
                 responseJson.put("error", "not found");
             }
 
-            byte[] bytes = responseJson.toString().getBytes(StandardCharsets.UTF_8);
-            String header = "HTTP/1.1 200 OK\r\n"
-                    + "Content-Type: application/json; charset=utf-8\r\n"
-                    + "Content-Length: " + bytes.length + "\r\n"
-                    + "Connection: close\r\n\r\n";
-            out.write(header.getBytes(StandardCharsets.UTF_8));
-            out.write(bytes);
-            out.flush();
+            writeResponse(out, "200 OK", responseJson.toString().getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             Log.d(TAG, "client error: " + e.getMessage());
+        }
+    }
+
+    /** Constant-time token check. Fails closed when no token was configured. */
+    private boolean isAuthorized(String provided) {
+        if (authToken == null || authToken.isEmpty() || provided == null) {
+            return false;
+        }
+        if (provided.regionMatches(true, 0, "Bearer ", 0, 7)) {
+            provided = provided.substring(7).trim();
+        }
+        byte[] expected = authToken.getBytes(StandardCharsets.UTF_8);
+        byte[] actual = provided.getBytes(StandardCharsets.UTF_8);
+        return java.security.MessageDigest.isEqual(expected, actual);
+    }
+
+    private static void writeResponse(OutputStream out, String status, byte[] body) throws IOException {
+        String header = "HTTP/1.1 " + status + "\r\n"
+                + "Content-Type: application/json; charset=utf-8\r\n"
+                + "Content-Length: " + body.length + "\r\n"
+                + "Connection: close\r\n\r\n";
+        out.write(header.getBytes(StandardCharsets.UTF_8));
+        out.write(body);
+        out.flush();
+    }
+
+    private static void skipBytes(java.io.InputStream in, int count) throws IOException {
+        byte[] buf = new byte[Math.min(count, 8192)];
+        int remaining = count;
+        while (remaining > 0) {
+            int r = in.read(buf, 0, Math.min(buf.length, remaining));
+            if (r == -1) break;
+            remaining -= r;
         }
     }
 

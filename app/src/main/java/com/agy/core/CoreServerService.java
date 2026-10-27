@@ -10,6 +10,7 @@ import android.util.Log;
 import com.agy.runtime.RuntimeManager;
 
 import java.io.File;
+import java.security.SecureRandom;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -36,7 +37,10 @@ public final class CoreServerService extends Service {
         super.onCreate();
         runtime = new RuntimeManager(this);
         logBuffer = new com.agy.log.LogRingBuffer();
-        gatewayServer = new com.agy.gateway.SystemGatewayServer(this, logBuffer, com.agy.BuildConfig.GATEWAY_PORT);
+        // One secret for this launch, shared by the gateway and the agent sidecar.
+        CoreRuntimeState.gatewayToken = newToken();
+        gatewayServer = new com.agy.gateway.SystemGatewayServer(
+                this, logBuffer, com.agy.BuildConfig.GATEWAY_PORT, CoreRuntimeState.gatewayToken);
         gatewayServer.start();
 
         Log.i(TAG, "state paths: HOME=" + getFilesDir().getAbsolutePath()
@@ -186,6 +190,20 @@ public final class CoreServerService extends Service {
         super.onTaskRemoved(rootIntent);
         Log.i(TAG, "onTaskRemoved: Task swiped from recents; maintaining CoreServerService alive in background");
         ForegroundNotification.update(this, "Gemini Premium running in background");
+    }
+
+    /** 32 random bytes as lowercase hex, for the gateway/agent shared secret. */
+    private static String newToken() {
+        byte[] random = new byte[32];
+        new SecureRandom().nextBytes(random);
+        char[] hex = "0123456789abcdef".toCharArray();
+        char[] out = new char[random.length * 2];
+        for (int i = 0; i < random.length; i++) {
+            int v = random[i] & 0xff;
+            out[i * 2] = hex[v >>> 4];
+            out[i * 2 + 1] = hex[v & 0x0f];
+        }
+        return new String(out);
     }
 
     @Override

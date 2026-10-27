@@ -46,6 +46,44 @@ def resolve_gateway_url() -> str:
     )
     return "http://127.0.0.1:45161/gateway" if is_dev else "http://127.0.0.1:45160/gateway"
 
+def resolve_gateway_token() -> str:
+    """The gateway's per-launch secret, written next to logs/gateway.port (0600)."""
+    if "AGY_GATEWAY_TOKEN" in os.environ:
+        return os.environ["AGY_GATEWAY_TOKEN"]
+    candidates = []
+    home = os.environ.get("HOME")
+    if home:
+        candidates.append(os.path.join(home, "logs", "gateway.token"))
+    try:
+        from ..context import path_resolver
+        app_root = path_resolver.load_paths().get("app_root")
+        if app_root:
+            candidates.append(os.path.join(app_root, "logs", "gateway.token"))
+    except Exception:
+        pass
+    candidates.extend([
+        "/data/user/0/com.agy.dev/files/logs/gateway.token",
+        "/data/user/0/com.agy/files/logs/gateway.token",
+    ])
+    for tfile in candidates:
+        try:
+            with open(tfile, "r") as f:
+                tok = f.read().strip()
+            if tok:
+                return tok
+        except Exception:
+            pass
+    return ""
+
+
+def _headers(token: str = None) -> Dict[str, str]:
+    h = {"Content-Type": "application/json"}
+    tok = token if token is not None else resolve_gateway_token()
+    if tok:
+        h["Authorization"] = "Bearer " + tok
+    return h
+
+
 DEFAULT_GATEWAY_URL = resolve_gateway_url()
 
 def send_command(command: str, payload: Dict[str, Any] = None, gateway_url: str = None) -> Dict[str, Any]:
@@ -55,8 +93,9 @@ def send_command(command: str, payload: Dict[str, Any] = None, gateway_url: str 
         "payload": payload or {}
     }
     data = json.dumps(packet).encode("utf-8")
-    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
-    
+    headers = _headers()
+    req = urllib.request.Request(url, data=data, headers=headers)
+
     try:
         with urllib.request.urlopen(req, timeout=1.0) as resp:
             return json.loads(resp.read().decode("utf-8"))
@@ -65,7 +104,7 @@ def send_command(command: str, payload: Dict[str, Any] = None, gateway_url: str 
         if gateway_url is None:
             alt_url = "http://127.0.0.1:45160/gateway" if ":45161/" in url else "http://127.0.0.1:45161/gateway"
             try:
-                alt_req = urllib.request.Request(alt_url, data=data, headers={"Content-Type": "application/json"})
+                alt_req = urllib.request.Request(alt_url, data=data, headers=headers)
                 with urllib.request.urlopen(alt_req, timeout=1.0) as resp:
                     return json.loads(resp.read().decode("utf-8"))
             except Exception:

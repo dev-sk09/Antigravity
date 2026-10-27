@@ -12,6 +12,8 @@ public final class CoreRuntimeState {
     public static volatile String serverUrl = null;
     public static volatile int httpsPort = RuntimeConfig.DEFAULT_HTTPS_PORT;
     public static volatile String csrfToken = null;
+    /** Per-launch secret for the System Gateway and the local agent sidecar. */
+    public static volatile String gatewayToken = null;
 
     /** Fail-closed startup error, surfaced to the UI instead of a hung splash. */
     public static volatile String lastError = null;
